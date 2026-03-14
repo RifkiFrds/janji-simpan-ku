@@ -32,7 +32,7 @@ function AppLayout() {
         </Routes>
       </div>
       <BottomNavbar />
-      <PWAInstallPrompt />
+      {/* <PWAInstallPrompt /> */}
     </div>
   );
 }

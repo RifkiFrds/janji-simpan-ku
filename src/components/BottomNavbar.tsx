@@ -1,9 +1,10 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowLeftRight, CreditCard, BarChart3, UserCircle } from 'lucide-react';
+import { LayoutDashboard, GraduationCap, ArrowLeftRight, CreditCard, BarChart3, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/semester', label: 'Semester', icon: GraduationCap },
   { path: '/transaksi', label: 'Transaksi', icon: ArrowLeftRight },
   { path: '/rekening', label: 'Rekening', icon: CreditCard },
   { path: '/analitik', label: 'Analitik', icon: BarChart3 },
