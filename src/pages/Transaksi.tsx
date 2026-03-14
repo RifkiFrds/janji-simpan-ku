@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAccountStore } from '@/stores/useAccountStore';
 import { supabase } from '@/integrations/supabase/client';
 import TransactionItem from '@/components/TransactionItem';
 import QuickAddTransactionModal from '@/components/QuickAddTransactionModal';
@@ -9,6 +10,7 @@ import { Input } from '@/components/ui/input';
 
 export default function Transaksi() {
   const { user } = useAuth();
+  const { accounts, fetchAccounts } = useAccountStore();
   const [semesters, setSemesters] = useState<any[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<string>('');
   const [transactions, setTransactions] = useState<any[]>([]);
@@ -19,16 +21,15 @@ export default function Transaksi() {
   const fetchData = async () => {
     if (!user) return;
 
+    await fetchAccounts(user.id);
+
     const { data: sems } = await supabase
       .from('semesters')
       .select('*')
       .eq('user_id', user.id)
       .order('start_date', { ascending: false });
-
     setSemesters(sems || []);
-    if (sems?.length && !selectedSemester) {
-      setSelectedSemester(sems[0].id);
-    }
+    if (sems?.length && !selectedSemester) setSelectedSemester(sems[0].id);
 
     const { data: cats } = await supabase.from('categories').select('*');
     setCategories(cats || []);
@@ -36,17 +37,13 @@ export default function Transaksi() {
 
   const fetchTransactions = async () => {
     if (!selectedSemester) return;
-
     let query = supabase
       .from('transactions')
       .select('*, categories(name, icon)')
       .eq('semester_id', selectedSemester)
       .order('date', { ascending: false });
 
-    if (search) {
-      query = query.ilike('title', `%${search}%`);
-    }
-
+    if (search) query = query.ilike('title', `%${search}%`);
     const { data } = await query;
     setTransactions(data || []);
   };
@@ -58,45 +55,28 @@ export default function Transaksi() {
     <div className="space-y-5 animate-fade-in">
       <h1 className="text-xl font-bold text-foreground">Transaksi</h1>
 
-      <div className="flex gap-2">
-        <Select value={selectedSemester} onValueChange={setSelectedSemester}>
-          <SelectTrigger className="rounded-xl flex-1">
-            <SelectValue placeholder="Pilih Semester" />
-          </SelectTrigger>
-          <SelectContent>
-            {semesters.map((s) => (
-              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      <Select value={selectedSemester} onValueChange={setSelectedSemester}>
+        <SelectTrigger className="rounded-xl">
+          <SelectValue placeholder="Pilih Semester" />
+        </SelectTrigger>
+        <SelectContent>
+          {semesters.map((s) => (
+            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Cari transaksi..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="pl-10 rounded-xl"
-        />
+        <Input placeholder="Cari transaksi..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-10 rounded-xl" />
       </div>
 
       {transactions.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground text-sm">
-          Belum ada transaksi di semester ini
-        </div>
+        <div className="text-center py-12 text-muted-foreground text-sm">Belum ada transaksi di semester ini</div>
       ) : (
         <div className="bg-card rounded-2xl p-4 shadow-sm border border-border divide-y divide-border">
           {transactions.map((t) => (
-            <TransactionItem
-              key={t.id}
-              title={t.title}
-              amount={t.amount}
-              type={t.type}
-              category={t.categories?.name}
-              categoryIcon={t.categories?.icon}
-              date={t.date}
-            />
+            <TransactionItem key={t.id} title={t.title} amount={t.amount} type={t.type} category={t.categories?.name} categoryIcon={t.categories?.icon} date={t.date} />
           ))}
         </div>
       )}
@@ -112,6 +92,7 @@ export default function Transaksi() {
         open={showAdd}
         onOpenChange={setShowAdd}
         categories={categories}
+        accounts={accounts}
         semesterId={selectedSemester || null}
         onSuccess={fetchTransactions}
       />

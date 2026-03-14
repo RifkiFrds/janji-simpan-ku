@@ -8,6 +8,7 @@ import BottomNavbar from "@/components/BottomNavbar";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Transaksi from "./pages/Transaksi";
+import Rekening from "./pages/Rekening";
 import Semester from "./pages/Semester";
 import Analitik from "./pages/Analitik";
 import Profil from "./pages/Profil";
@@ -22,6 +23,7 @@ function AppLayout() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/transaksi" element={<Transaksi />} />
+          <Route path="/rekening" element={<Rekening />} />
           <Route path="/semester" element={<Semester />} />
           <Route path="/analitik" element={<Analitik />} />
           <Route path="/profil" element={<Profil />} />
