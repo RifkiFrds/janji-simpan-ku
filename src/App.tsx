@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import BottomNavbar from "@/components/BottomNavbar";
+import PWAInstallPrompt from "@/components/PWAInstallPrompt";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Transaksi from "./pages/Transaksi";
@@ -31,6 +32,7 @@ function AppLayout() {
         </Routes>
       </div>
       <BottomNavbar />
+      <PWAInstallPrompt />
     </div>
   );
 }
