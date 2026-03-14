@@ -1,78 +1,117 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
-import BalanceCard from '@/components/BalanceCard';
-import SavingProgressBar from '@/components/SavingProgressBar';
+import { useAccountStore } from '@/stores/useAccountStore';
+import GlobalBalanceCard from '@/components/GlobalBalanceCard';
+import AccountBalanceCards from '@/components/AccountBalanceCards';
+import ActiveSemesterCard from '@/components/ActiveSemesterCard';
+import SavingTargetCard from '@/components/SavingTargetCard';
 import TransactionItem from '@/components/TransactionItem';
 import QuickAddTransactionModal from '@/components/QuickAddTransactionModal';
 import { Plus } from 'lucide-react';
 
-interface Category {
-  id: string;
-  name: string;
-  icon: string;
-}
-
 export default function Dashboard() {
   const { user } = useAuth();
+  const { accounts, allocationRules, fetchAccounts, fetchAllocationRules, createDefaultAccounts } = useAccountStore();
   const [activeSemester, setActiveSemester] = useState<any>(null);
   const [transactions, setTransactions] = useState<any[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [allTransactions, setAllTransactions] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
-  const [stats, setStats] = useState({ income: 0, expense: 0, saving: 0 });
+  const [semesterStats, setSemesterStats] = useState({ income: 0, expense: 0, saving: 0 });
+  const [savingRule, setSavingRule] = useState({ min_saving_per_semester: 0, ideal_saving_ratio: 40 });
 
   const fetchData = async () => {
     if (!user) return;
 
-    // Get active semester (most recent)
+    // Fetch accounts, create defaults if none exist
+    await fetchAccounts(user.id);
+    await fetchAllocationRules(user.id);
+
+    // Get categories
+    const { data: cats } = await supabase.from('categories').select('*');
+    setCategories(cats || []);
+
+    // Get saving rule
+    const { data: sr } = await supabase.from('saving_rules').select('*').eq('user_id', user.id).maybeSingle();
+    if (sr) setSavingRule(sr);
+
+    // Get active semester
     const { data: semesters } = await supabase
       .from('semesters')
       .select('*')
       .eq('user_id', user.id)
       .order('start_date', { ascending: false })
       .limit(1);
-
     const sem = semesters?.[0] || null;
     setActiveSemester(sem);
 
-    // Get categories
-    const { data: cats } = await supabase.from('categories').select('*');
-    setCategories(cats || []);
+    // Get ALL transactions for global balance
+    const { data: allTxns } = await supabase
+      .from('transactions')
+      .select('amount, type, account_id')
+      .eq('user_id', user.id);
+    setAllTransactions(allTxns || []);
 
     if (sem) {
-      // Get transactions for active semester
+      // Recent transactions
       const { data: txns } = await supabase
         .from('transactions')
         .select('*, categories(name, icon)')
         .eq('semester_id', sem.id)
         .order('date', { ascending: false })
         .limit(5);
-
       setTransactions(txns || []);
 
-      // Calculate stats
-      const { data: allTxns } = await supabase
+      // Semester stats
+      const { data: semTxns } = await supabase
         .from('transactions')
         .select('amount, type')
         .eq('semester_id', sem.id);
-
-      const income = (allTxns || [])
-        .filter((t) => t.type === 'income')
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-      const expense = (allTxns || [])
-        .filter((t) => t.type === 'expense')
-        .reduce((sum, t) => sum + Number(t.amount), 0);
-
-      setStats({ income, expense, saving: income - expense });
+      const income = (semTxns || []).filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+      const expense = (semTxns || []).filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+      setSemesterStats({ income, expense, saving: income - expense });
     }
   };
 
   useEffect(() => {
-    fetchData();
+    if (user) fetchData();
   }, [user]);
 
+  // Create default accounts if none exist
+  useEffect(() => {
+    if (user && accounts.length === 0 && !useAccountStore.getState().loading) {
+      createDefaultAccounts(user.id).then(() => fetchData());
+    }
+  }, [user, accounts.length]);
+
+  // Global balance = SUM(all income) - SUM(all expense)
+  const globalBalance = allTransactions.reduce((sum, t) => {
+    return sum + (t.type === 'income' ? Number(t.amount) : -Number(t.amount));
+  }, 0);
+
+  // Calculate per-account balances
+  const accountBalances = accounts.map(acc => {
+    const rule = allocationRules.find(r => r.account_id === acc.id);
+    // For master: income that hasn't been allocated (unallocated income)
+    // For others: allocated income - expenses from that account
+    const accTxns = allTransactions.filter(t => t.account_id === acc.id);
+    const accIncome = accTxns.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+    const accExpense = accTxns.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+    return {
+      id: acc.id,
+      name: acc.name,
+      icon: acc.icon,
+      balance: accIncome - accExpense,
+      is_master: acc.is_master,
+      percentage: rule?.percentage,
+    };
+  });
+
+  const idealSaving = semesterStats.income * (savingRule.ideal_saving_ratio / 100);
+
   return (
-    <div className="space-y-5 animate-fade-in">
+    <div className="space-y-4 animate-fade-in pb-4">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">Selamat datang 👋</p>
@@ -87,26 +126,37 @@ export default function Dashboard() {
         )}
       </div>
 
-      <BalanceCard
-        totalSavings={stats.saving}
-        income={stats.income}
-        expense={stats.expense}
-        currentBalance={stats.income - stats.expense}
-      />
+      {/* Card 1 - Global Balance */}
+      <GlobalBalanceCard totalBalance={globalBalance} />
 
+      {/* Card 2 - Account Balances */}
+      {accounts.length > 0 && <AccountBalanceCards accounts={accountBalances} />}
+
+      {/* Card 3 - Active Semester */}
       {activeSemester && (
-        <SavingProgressBar
-          currentSaving={stats.saving}
-          target={Number(activeSemester.saving_target)}
+        <ActiveSemesterCard
+          name={activeSemester.name}
+          income={semesterStats.income}
+          expense={semesterStats.expense}
+          saving={semesterStats.saving}
         />
       )}
 
+      {/* Card 4 - Saving Target */}
+      {activeSemester && (
+        <SavingTargetCard
+          target={Number(activeSemester.saving_target)}
+          actual={semesterStats.saving}
+          idealSaving={idealSaving}
+          idealRatio={savingRule.ideal_saving_ratio}
+        />
+      )}
+
+      {/* Card 5 - Recent Transactions */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-base font-bold text-foreground">Transaksi Terbaru</h2>
-        </div>
+        <h2 className="text-sm font-bold text-foreground mb-2">Transaksi Terbaru</h2>
         {transactions.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground text-sm">
+          <div className="text-center py-8 text-muted-foreground text-sm bg-card rounded-2xl border border-border">
             Belum ada transaksi
           </div>
         ) : (
@@ -138,6 +188,7 @@ export default function Dashboard() {
         open={showAdd}
         onOpenChange={setShowAdd}
         categories={categories}
+        accounts={accounts}
         semesterId={activeSemester?.id || null}
         onSuccess={fetchData}
       />

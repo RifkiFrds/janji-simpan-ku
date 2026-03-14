@@ -1,11 +1,11 @@
 import { useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, ArrowLeftRight, GraduationCap, BarChart3, UserCircle } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, CreditCard, BarChart3, UserCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const tabs = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
   { path: '/transaksi', label: 'Transaksi', icon: ArrowLeftRight },
-  { path: '/semester', label: 'Semester', icon: GraduationCap },
+  { path: '/rekening', label: 'Rekening', icon: CreditCard },
   { path: '/analitik', label: 'Analitik', icon: BarChart3 },
   { path: '/profil', label: 'Profil', icon: UserCircle },
 ];
@@ -25,9 +25,7 @@ export default function BottomNavbar() {
               onClick={() => navigate(tab.path)}
               className={cn(
                 'flex flex-col items-center gap-0.5 py-2 px-3 rounded-xl transition-all duration-200 min-w-[60px]',
-                isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <tab.icon className={cn('h-5 w-5', isActive && 'scale-110')} strokeWidth={isActive ? 2.5 : 2} />
