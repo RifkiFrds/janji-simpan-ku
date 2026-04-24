@@ -1,73 +1,95 @@
-# Welcome to your Lovable project
+# JanjiKuMoney v2
 
-## Project info
+Personal finance application with **semester-based tracking** and **account allocation system**.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+Live: https://janjiku-money.vercel.app/
 
-## How can I edit this code?
+---
 
-There are several ways of editing your application.
+## Overview
 
-**Use Lovable**
+JanjiKuMoney helps users manage money using:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+* Semester-based financial tracking
+* Account-based budgeting (financial buckets)
+* Saving rules and discipline tracking
 
-Changes made via Lovable will be committed automatically to this repo.
+The system separates:
 
-**Use your preferred IDE**
+* **Accounts** → real money (rekening)
+* **Transactions** → income & expenses
+* **Semesters** → analysis only (not affecting total balance)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Core Features
 
-Follow these steps:
+* Global balance (total saldo semua rekening)
+* Account allocation (auto distribution from master income)
+* Dynamic allocation rules (must total 100%)
+* Semester financial tracking
+* Saving rules (minimum & ratio)
+* Planned expenses & prediction
+* Financial timeline
+* Offline support (PWA)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
+---
+
+## Account System
+
+Example accounts:
+
+* Master Income
+* Kebutuhan Pokok
+* Tabungan Masa Depan
+* Lifestyle
+
+All income goes to **Master Income**, then distributed based on allocation rules.
+
+---
+
+## Tech Stack
+
+Frontend:
+
+* React + Vite
+* TypeScript
+* Tailwind CSS
+* shadcn/ui
+* Zustand
+* TanStack Query
+* Recharts
+
+Backend:
+
+* Supabase (PostgreSQL, Auth)
+
+PWA:
+
+* Service Worker
+* Local storage (offline queue)
+
+---
+
+## Development
+
+```bash
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+---
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Notes
 
-**Use GitHub Codespaces**
+* Semester is used for analytics only
+* Total balance is calculated from all transactions (not per semester)
+* Allocation rules apply only to future income
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## Author
 
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Muhamad Rifki Firdaus
