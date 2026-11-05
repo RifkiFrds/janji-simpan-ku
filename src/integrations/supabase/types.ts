@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      budget_settings: {
+        Row: {
+          created_at: string
+          id: string
+          monthly_threshold: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly_threshold?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly_threshold?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       accounts: {
         Row: {
           created_at: string
@@ -85,6 +109,8 @@ export type Database = {
           icon: string
           id: string
           is_default: boolean
+          is_essential: boolean
+          is_debt: boolean
           name: string
           user_id: string | null
         }
@@ -93,6 +119,8 @@ export type Database = {
           icon?: string
           id?: string
           is_default?: boolean
+          is_essential?: boolean
+          is_debt?: boolean
           name: string
           user_id?: string | null
         }
@@ -101,6 +129,8 @@ export type Database = {
           icon?: string
           id?: string
           is_default?: boolean
+          is_essential?: boolean
+          is_debt?: boolean
           name?: string
           user_id?: string | null
         }
@@ -242,6 +272,7 @@ export type Database = {
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
           user_id: string
+          vault_ack: boolean
         }
         Insert: {
           account_id?: string | null
@@ -256,6 +287,7 @@ export type Database = {
           type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id: string
+          vault_ack?: boolean
         }
         Update: {
           account_id?: string | null
@@ -270,6 +302,7 @@ export type Database = {
           type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           user_id?: string
+          vault_ack?: boolean
         }
         Relationships: [
           {

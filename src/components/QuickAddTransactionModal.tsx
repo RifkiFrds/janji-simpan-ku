@@ -9,12 +9,16 @@ import { useAuth } from '@/hooks/useAuth';
 import { useOfflineStore } from '@/stores/useOfflineStore';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { formatRupiah } from '@/lib/format';
 import type { Account } from '@/stores/useAccountStore';
+import { toLocalDateISO, type BudgetMode } from '@/lib/budgetMode';
 
 interface Category {
   id: string;
   name: string;
   icon: string;
+  is_essential?: boolean;
+  is_debt?: boolean;
 }
 
 interface QuickAddTransactionModalProps {
@@ -23,11 +27,14 @@ interface QuickAddTransactionModalProps {
   categories: Category[];
   accounts: Account[];
   semesterId: string | null;
-  onSuccess: () => void;
+  mode: BudgetMode;
+  monthlyExpense: number;
+  threshold: number;
+  onSuccess: (insertedTx?: { id: string; type: string; amount: number }) => void;
 }
 
 export default function QuickAddTransactionModal({
-  open, onOpenChange, categories, accounts, semesterId, onSuccess
+  open, onOpenChange, categories, accounts, semesterId, mode, monthlyExpense, threshold, onSuccess
 }: QuickAddTransactionModalProps) {
   const { user } = useAuth();
   const { isOnline, addPending } = useOfflineStore();
@@ -44,6 +51,13 @@ export default function QuickAddTransactionModal({
       return;
     }
 
+    if (type === 'expense' && mode === 'survival' && monthlyExpense + parseFloat(amount) > threshold) {
+      toast.error(
+        `Survival Mode: pengeluaran bulan ini sudah/akan melebihi ${formatRupiah(threshold)}. Transaksi dibatalkan.`
+      );
+      return;
+    }
+
     const txData = {
       user_id: user.id,
       semester_id: semesterId,
@@ -52,7 +66,7 @@ export default function QuickAddTransactionModal({
       title,
       amount: parseFloat(amount),
       type,
-      date: new Date().toISOString().split('T')[0],
+      date: toLocalDateISO(new Date()),
     };
 
     if (!isOnline) {
@@ -63,7 +77,7 @@ export default function QuickAddTransactionModal({
     }
 
     setLoading(true);
-    const { error } = await supabase.from('transactions').insert(txData);
+    const { data, error } = await supabase.from('transactions').insert(txData).select().single();
     setLoading(false);
 
     if (error) {
@@ -71,7 +85,7 @@ export default function QuickAddTransactionModal({
     } else {
       toast.success('Transaksi berhasil ditambahkan');
       resetForm();
-      onSuccess();
+      onSuccess(data ? { id: data.id, type: data.type, amount: Number(data.amount) } : undefined);
     }
   };
 
@@ -87,6 +101,12 @@ export default function QuickAddTransactionModal({
   const filteredAccounts = type === 'income'
     ? accounts.filter(a => a.is_master)
     : accounts.filter(a => !a.is_master);
+
+  // Di Survival Mode, pengeluaran hanya boleh pakai kategori kebutuhan pokok
+  const filteredCategories = type === 'expense' && mode === 'survival'
+    ? categories.filter(c => c.is_essential)
+    : categories;
+  const noEssentialCategories = type === 'expense' && mode === 'survival' && filteredCategories.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -153,18 +173,23 @@ export default function QuickAddTransactionModal({
 
           <div>
             <Label className="text-xs font-semibold text-muted-foreground">Kategori</Label>
-            <Select value={categoryId} onValueChange={setCategoryId}>
+            <Select value={categoryId} onValueChange={setCategoryId} disabled={noEssentialCategories}>
               <SelectTrigger className="rounded-xl mt-1">
                 <SelectValue placeholder="Pilih kategori" />
               </SelectTrigger>
               <SelectContent>
-                {categories.map((cat) => (
+                {filteredCategories.map((cat) => (
                   <SelectItem key={cat.id} value={cat.id}>
                     {cat.icon} {cat.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            {noEssentialCategories && (
+              <p className="text-xs text-expense mt-1">
+                Tidak ada kategori kebutuhan pokok. Atur dulu di Profil.
+              </p>
+            )}
           </div>
 
           <Button

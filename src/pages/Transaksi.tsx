@@ -1,27 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useAccountStore } from '@/stores/useAccountStore';
+import { useBudgetStore } from '@/stores/useBudgetStore';
 import { supabase } from '@/integrations/supabase/client';
 import TransactionItem from '@/components/TransactionItem';
 import QuickAddTransactionModal from '@/components/QuickAddTransactionModal';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { getBudgetMode, getMonthBounds } from '@/lib/budgetMode';
 
 export default function Transaksi() {
   const { user } = useAuth();
   const { accounts, fetchAccounts } = useAccountStore();
+  const { budgetSettings, fetchBudgetSettings } = useBudgetStore();
   const [semesters, setSemesters] = useState<any[]>([]);
   const [selectedSemester, setSelectedSemester] = useState<string>('');
   const [transactions, setTransactions] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [showAdd, setShowAdd] = useState(false);
   const [search, setSearch] = useState('');
+  const [monthStats, setMonthStats] = useState({ income: 0, expense: 0 });
 
   const fetchData = async () => {
     if (!user) return;
 
     await fetchAccounts(user.id);
+    await fetchBudgetSettings(user.id);
 
     const { data: sems } = await supabase
       .from('semesters')
@@ -33,6 +38,18 @@ export default function Transaksi() {
 
     const { data: cats } = await supabase.from('categories').select('*');
     setCategories(cats || []);
+
+    // Status bulan kalender berjalan (sama sumber kalkulasi dengan Dashboard)
+    const { startISO, endISO } = getMonthBounds();
+    const { data: monthTxns } = await supabase
+      .from('transactions')
+      .select('amount, type')
+      .eq('user_id', user.id)
+      .gte('date', startISO)
+      .lte('date', endISO);
+    const monthlyIncome = (monthTxns || []).filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
+    const monthlyExpense = (monthTxns || []).filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+    setMonthStats({ income: monthlyIncome, expense: monthlyExpense });
   };
 
   const fetchTransactions = async () => {
@@ -50,6 +67,9 @@ export default function Transaksi() {
 
   useEffect(() => { fetchData(); }, [user]);
   useEffect(() => { fetchTransactions(); }, [selectedSemester, search]);
+
+  const threshold = Number(budgetSettings?.monthly_threshold ?? 2000000);
+  const mode = getBudgetMode(monthStats.income, threshold);
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -94,7 +114,10 @@ export default function Transaksi() {
         categories={categories}
         accounts={accounts}
         semesterId={selectedSemester || null}
-        onSuccess={fetchTransactions}
+        mode={mode}
+        monthlyExpense={monthStats.expense}
+        threshold={threshold}
+        onSuccess={() => { fetchTransactions(); fetchData(); }}
       />
     </div>
   );
